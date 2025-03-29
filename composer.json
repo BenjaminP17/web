@@ -24,7 +24,7 @@
     "friendsofpear/pear_exception": "0.0.*",
     "geocoder-php/google-maps-provider": "^4.7",
     "jms/serializer-bundle": "5.*",
-    "knpuniversity/oauth2-client-bundle": "^1.4",
+    "knpuniversity/oauth2-client-bundle": "^2.8",
     "laminas/laminas-feed": "^2.18",
     "league/iso3166": "^4.0",
     "league/oauth2-github": "^0.2.1",
