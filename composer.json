@@ -3,7 +3,7 @@
   "description": "Main repository for afup website",
   "type": "project",
   "require": {
-    "php": "7.4.* | 8.2.*",
+    "php": "7.4.* | 8.1.*",
     "ext-curl": "*",
     "ext-dom": "*",
     "ext-gd": "*",
@@ -21,19 +21,21 @@
     "ekino/newrelic-bundle": "^2.4",
     "erusev/parsedown": "^1.6",
     "excelwebzone/recaptcha-bundle": "^1.5",
-    "ezyang/htmlpurifier": "^4.10",
     "friendsofpear/pear_exception": "0.0.*",
-    "j7mbo/twitter-api-php": "^1.0",
+    "geocoder-php/google-maps-provider": "^4.7",
     "jms/serializer-bundle": "5.*",
     "knpuniversity/oauth2-client-bundle": "^1.4",
+    "laminas/laminas-feed": "^2.18",
     "league/iso3166": "^4.0",
     "league/oauth2-github": "^0.2.1",
-    "nojimage/twitter-text-php": "1.1.*",
+    "myclabs/php-enum": "^1.8",
+    "nyholm/psr7": "^1.8",
     "pacely/mailchimp-apiv3": "^1.0",
     "pear/pear": "^1.10",
     "phpmailer/phpmailer": "^6.9",
     "phpoffice/phpspreadsheet": "^1.6",
     "presta/sitemap-bundle": "3.3.0",
+    "psr/clock": "^1.0",
     "robmorgan/phinx": "^0.14.0",
     "sabre/vobject": "^4.1",
     "setasign/fpdf": "^1.8",
@@ -48,14 +50,15 @@
     "symfony/lock": "^5.4",
     "symfony/mime": "^5.4",
     "symfony/monolog-bundle": "^3.1",
+    "symfony/polyfill-php80": "^1.31",
     "symfony/security-bundle": "^5.4",
+    "symfony/string": "^5.4",
     "symfony/translation": "^5.4",
     "symfony/twig-bundle": "^5.4",
     "symfony/validator": "^5.4",
     "symfony/yaml": "^5.4",
     "twig/extensions": "^1.4",
     "twig/twig": "^2.16",
-    "willdurand/geocoder": "^3.3",
     "znk3r/html_common": "*",
     "znk3r/html_quickform": "4.0.2"
   },
@@ -72,7 +75,10 @@
   "config": {
     "bin-dir": "bin",
     "secure-http": false,
-    "sort-packages": true
+    "sort-packages": true,
+    "allow-plugins": {
+      "php-http/discovery": true
+    }
   },
   "extra": {
     "symfony-app-dir": "app",
@@ -99,7 +105,9 @@
   "autoload-dev": {
     "psr-4": {
       "Afup\\Site\\Tests\\": "tests/unit/Afup/",
-      "AppBundle\\Tests\\": "tests/unit/AppBundle/"
+      "Afup\\Tests\\Support\\": "tests/support/",
+      "AppBundle\\Tests\\": "tests/unit/AppBundle/",
+      "PlanetePHP\\IntegrationTests\\": "tests/integration/PlanetePHP/"
     }
   },
   "license": "MIT",
@@ -113,6 +121,7 @@
   "require-dev": {
     "behat/behat": "^3.15",
     "behat/mink-goutte-driver": "^2.0",
+    "fakerphp/faker": "^1.24",
     "friends-of-behat/mink-extension": "^2.7",
     "friendsofphp/php-cs-fixer": "~2",
     "ifsnop/mysqldump-php": "^2.12",

@@ -1,14 +1,11 @@
 # Learn more about services, parameters and containers at
 # http://symfony.com/doc/current/book/service_container.html
 parameters:
-    twitter_api_settings:
-        oauth_access_token: "%twitter_oauth_access_token%"
-        oauth_access_token_secret: "%twitter_oauth_access_token_secret%"
-        consumer_key: "%twitter_consumer_key%"
-        consumer_secret: "%twitter_consumer_secret%"
     app.badge_dir: "%kernel.project_dir%/../htdocs/uploads/badges"
     app.members_logo_dir: "%kernel.project_dir%/../htdocs/uploads/members_logo"
     app.general_meetings_dir: "%kernel.project_dir%/../htdocs/uploads/general_meetings_reports"
+    bluesky.api.identifier: "%bluesky_api_identifier%"
+    bluesky.api.app_password: "%bluesky_api_app_password%"
 
 services:
 #    service_name:
@@ -16,6 +13,10 @@ services:
 #        arguments: ["@another_service_name", "plain_value", "%parameter_name%"]
     _defaults:
         public: true
+
+    _instanceof:
+        AppBundle\SocialNetwork\Transport:
+            tags: [ 'app.social_network.transport' ]
 
     Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler:
         public:    false
@@ -30,6 +31,9 @@ services:
         resource: '../../sources/AppBundle/Command/*'
         autowire: true
         autoconfigure: true
+
+    AppBundle\Clock\NativeClock: ~
+    Psr\Clock\ClockInterface: '@AppBundle\Clock\NativeClock'
 
     AppBundle\Command\UpdateMailchimpMembersCommand:
         autoconfigure: true
@@ -282,6 +286,11 @@ services:
         factory: ["@ting", get]
         arguments: [AppBundle\Association\Model\Repository\CompanyMemberRepository]
 
+    AppBundle\Event\Model\Repository\PlanningRepository:
+        class: AppBundle\Event\Model\Repository\PlanningRepository
+        factory: [ "@ting", get ]
+        arguments: [ AppBundle\Event\Model\Repository\PlanningRepository ]
+
     AppBundle\Security\LegacyAuthenticator:
         autowire: true
 
@@ -336,10 +345,6 @@ services:
 
     AppBundle\Joindin\JoindinTalk:
         arguments: ["@cache.system"]
-
-    TwitterAPIExchange:
-        class: TwitterAPIExchange
-        arguments: ["%twitter_api_settings%"]
 
     # API/Client Meetup techletter
     app.mailchimp_techletter_client:
@@ -466,6 +471,11 @@ services:
         factory: ["@ting", get]
         arguments: [AppBundle\Event\Model\Repository\EventRepository]
 
+    AppBundle\Event\Model\Repository\EventCouponRepository:
+        class: AppBundle\Event\Model\Repository\EventCouponRepository
+        factory: ["@ting", get]
+        arguments: [AppBundle\Event\Model\Repository\EventCouponRepository]
+
     AppBundle\Event\Model\Repository\EventStatsRepository:
         autowire: true
 
@@ -545,6 +555,10 @@ services:
         autowire: true
         autoconfigure: true
 
+    AppBundle\Association\Form\CompanyEditType:
+        autowire: true
+        autoconfigure: true
+
     AppBundle\Event\Form\TicketType:
         autowire: true
         tags:
@@ -584,16 +598,11 @@ services:
           - 'Afup\Site\Forum\Inscriptions'
 
     Afup\Site\Association\Cotisations:
-        class: Afup\Site\Association\Cotisations
         factory: ['@AppBundle\LegacyModelFactory', 'createObject']
         arguments:
           - 'Afup\Site\Association\Cotisations'
-
-    Afup\Site\Association\Personnes_Morales:
-        class: Afup\Site\Association\Personnes_Morales
-        factory: ['@AppBundle\LegacyModelFactory', 'createObject']
-        arguments:
-            - 'Afup\Site\Association\Personnes_Morales'
+        calls:
+          - [setCompanyMemberRepository, ['@AppBundle\Association\Model\Repository\CompanyMemberRepository']]
 
     AppBundle\Event\Form\PurchaseType:
         autowire: true
@@ -639,14 +648,16 @@ services:
     AppBundle\Event\JsonLd:
         autowire: true
 
+    geocoder:
+        class: Geocoder\StatefulGeocoder
+        arguments: ['@geocoder_provider_google_maps']
+
+    geocoder_provider_google_maps:
+        class: Geocoder\Provider\GoogleMaps\GoogleMaps
+        arguments: ['@Psr\Http\Client\ClientInterface', null, "%google_maps_api_key%"]
+
     AppBundle\Offices\OfficeFinder:
-        arguments: ['@Geocoder\Provider\GoogleMaps']
-
-    Geocoder\Provider\GoogleMaps:
-        arguments: ['@Ivory\HttpAdapter\CurlHttpAdapter', null, null, true, "%google_maps_api_key%"]
-
-    Ivory\HttpAdapter\CurlHttpAdapter:
-        public: false
+        arguments: ['@geocoder']
 
     AppBundle\Association\UserMembership\StatisticsComputer:
         autowire: true
@@ -679,9 +690,7 @@ services:
             - {name: form.type}
 
     AppBundle\Subscriber\SitemapXmlSubscriber:
-        arguments:
-            - "@router"
-            - "@ting"
+        autowire: true
         tags:
             - { name: "kernel.event_subscriber", priority: 100 }
 
@@ -716,10 +725,6 @@ services:
     PlanetePHP\FeedArticleRepository:
         autowire: true
 
-    PlanetePHP\FeedCrawler:
-        autowire: true
-        public: true
-
     AppBundle\Github\GithubClient:
         arguments:
             $githubClient: '@http_client.github'
@@ -728,3 +733,34 @@ services:
         arguments:
             $httpClient: '@http_client.meetup'
             $antennesCollection: '@AppBundle\Antennes\AntennesCollection'
+
+    PlanetePHP\SymfonyFeedClient:
+        arguments:
+            $httpClient: '@http_client'
+
+    PlanetePHP\FeedCrawler:
+        arguments:
+            $clock: '@Psr\Clock\ClockInterface'
+            $httpClient: '@PlanetePHP\SymfonyFeedClient'
+            $feedRepository: '@PlanetePHP\FeedRepository'
+            $feedArticleRepository: '@PlanetePHP\FeedArticleRepository'
+            $logger: '@logger'
+
+    AppBundle\SocialNetwork\Bluesky\BlueskyTransport:
+        arguments:
+            $httpClient: '@http_client.bluesky'
+            $apiIdentifier: '%bluesky.api.identifier%'
+            $apiAppPassword: '%bluesky.api.app_password%'
+
+    AppBundle\VideoNotifier\HistoryRepository:
+        arguments:
+            $connection: '@Doctrine\DBAL\Connection'
+
+    AppBundle\VideoNotifier\Engine:
+        arguments:
+            $transports: !tagged_iterator app.social_network.transport
+            $planningRepository: '@AppBundle\Event\Model\Repository\PlanningRepository'
+            $talkRepository: '@AppBundle\Event\Model\Repository\TalkRepository'
+            $speakerRepository: '@AppBundle\Event\Model\Repository\SpeakerRepository'
+            $historyRepository: '@AppBundle\VideoNotifier\HistoryRepository'
+            $logger: '@logger'
